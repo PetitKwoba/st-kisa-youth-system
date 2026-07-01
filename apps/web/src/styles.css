@@ -1,7 +1,7 @@
 :root {
   color: #17221b;
   background: #f4f6f1;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --ink: #17221b;
@@ -72,7 +72,7 @@ h1,
 h2,
 h3,
 strong {
-  font-family: "Manrope", "DM Sans", sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .sr-only {
@@ -860,7 +860,7 @@ strong {
 .approval-number {
   margin: 15px 0 4px;
   color: #f2c75d;
-  font-family: "Manrope", sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 42px;
   font-weight: 800;
 }
@@ -1482,7 +1482,7 @@ tbody tr:last-child td {
 
 .preview-list span {
   color: var(--gold);
-  font-family: "Manrope", sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 800;
 }
 
