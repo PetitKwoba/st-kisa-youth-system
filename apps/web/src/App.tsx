@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Accounting } from "./pages/Accounting";
+import { Approvals } from "./pages/Approvals";
 import { Contributions } from "./pages/Contributions";
 import { Dashboard } from "./pages/Dashboard";
 import { Login } from "./pages/Login";
@@ -37,6 +38,7 @@ function Portal() {
         <Route path="/contributions" element={<Contributions />} />
         <Route path="/statements" element={<Statements />} />
         <Route path="/accounting" element={<RequireCapability capability="accounting:view"><Accounting /></RequireCapability>} />
+        <Route path="/approvals" element={<RequireCapability capability="approvals:view"><Approvals /></RequireCapability>} />
         <Route path="/welfare" element={<RequireCapability capability="welfare:view"><Welfare /></RequireCapability>} />
         <Route path="/refunds" element={<RequireCapability capability="refunds:view"><Refunds /></RequireCapability>} />
         <Route path="/investments" element={<RequireCapability capability="investments:view"><Investments /></RequireCapability>} />

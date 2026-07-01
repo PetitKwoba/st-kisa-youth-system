@@ -10,6 +10,7 @@ import {
 import { useState, type FormEvent } from "react";
 import { formatCurrency } from "../lib/finance";
 import { PageHeader, StatusBadge } from "../components/Ui";
+import { ApprovalProgress } from "../components/ApprovalProgress";
 import { useShowcase } from "../state/ShowcaseContext";
 
 function memberOptions(
@@ -22,7 +23,7 @@ function memberOptions(
 }
 
 export function Welfare() {
-  const { user, members, welfareRequests, addWelfareRequest } = useShowcase();
+  const { user, members, welfareRequests, approvalRequests, addWelfareRequest } = useShowcase();
   const [notice, setNotice] = useState("");
   const visible = user?.role === "MEMBER"
     ? welfareRequests.filter((item) => item.memberId === user.memberId)
@@ -91,7 +92,7 @@ export function Welfare() {
           </div>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Case</th><th>Member</th><th>Category</th><th className="numeric">Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Case</th><th>Member</th><th>Category</th><th className="numeric">Amount</th><th>Status</th><th>Approval route</th></tr></thead>
               <tbody>
                 {visible.map((item) => (
                   <tr key={item.id}>
@@ -100,6 +101,7 @@ export function Welfare() {
                     <td>{item.category}</td>
                     <td className="numeric table-strong">{formatCurrency(item.amount)}</td>
                     <td><StatusBadge status={item.status} /></td>
+                    <td><ApprovalProgress compact request={approvalRequests.find((approval) => approval.referenceId === item.id) ?? null} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -112,7 +114,7 @@ export function Welfare() {
 }
 
 export function Refunds() {
-  const { user, members, refunds, addRefundRequest } = useShowcase();
+  const { user, members, refunds, approvalRequests, addRefundRequest } = useShowcase();
   const [notice, setNotice] = useState("");
   const visible = user?.role === "MEMBER"
     ? refunds.filter((item) => item.memberId === user.memberId)
@@ -182,7 +184,7 @@ export function Refunds() {
           </div>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Request</th><th>Member</th><th className="numeric">Requested</th><th className="numeric">Net payable</th><th>Status</th></tr></thead>
+              <thead><tr><th>Request</th><th>Member</th><th className="numeric">Requested</th><th className="numeric">Net payable</th><th>Status</th><th>Approval route</th></tr></thead>
               <tbody>
                 {visible.map((item) => (
                   <tr key={item.id}>
@@ -191,6 +193,7 @@ export function Refunds() {
                     <td className="numeric">{formatCurrency(item.requestedAmount)}</td>
                     <td className="numeric table-strong">{formatCurrency(item.netPayable)}</td>
                     <td><StatusBadge status={item.status} /></td>
+                    <td><ApprovalProgress compact request={approvalRequests.find((approval) => approval.referenceId === item.id) ?? null} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -203,7 +206,7 @@ export function Refunds() {
 }
 
 export function Investments() {
-  const { investments, addInvestment } = useShowcase();
+  const { investments, approvalRequests, addInvestment } = useShowcase();
   const [notice, setNotice] = useState("");
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -251,7 +254,7 @@ export function Investments() {
           <div className="panel-heading operation-heading"><div><p className="eyebrow">Portfolio</p><h2>Current investments</h2></div></div>
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Instrument</th><th>Institution</th><th className="numeric">Principal</th><th>Maturity</th><th>Status</th></tr></thead>
+              <thead><tr><th>Instrument</th><th>Institution</th><th className="numeric">Principal</th><th>Maturity</th><th>Status</th><th>Approval route</th></tr></thead>
               <tbody>
                 {investments.map((item) => (
                   <tr key={item.id}>
@@ -260,6 +263,7 @@ export function Investments() {
                     <td className="numeric table-strong">{formatCurrency(item.principal)}</td>
                     <td>{item.maturityDate}</td>
                     <td><StatusBadge status={item.status} /></td>
+                    <td><ApprovalProgress compact request={approvalRequests.find((approval) => approval.referenceId === item.id) ?? null} /></td>
                   </tr>
                 ))}
               </tbody>

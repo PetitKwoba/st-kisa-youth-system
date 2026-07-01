@@ -6,15 +6,24 @@ import App from "./App";
 
 async function renderAs(
   path = "/",
-  account: "Board administrator" | "Treasurer" | "Member" = "Board administrator"
+  account: "Admin" | "Treasurer" | "Member" | "Secretary" | "Chairperson" = "Admin"
 ) {
+  const emails = {
+    Admin: "admin@stkisa.org",
+    Treasurer: "treasurer@stkisa.org",
+    Member: "member@stkisa.org",
+    Secretary: "secretary@stkisa.org",
+    Chairperson: "chair@stkisa.org"
+  };
   const user = userEvent.setup();
   render(
     <MemoryRouter initialEntries={[path]}>
       <App />
     </MemoryRouter>
   );
-  await user.click(screen.getByRole("button", { name: new RegExp(account, "i") }));
+  await user.type(screen.getByLabelText("Email address"), emails[account]);
+  await user.type(screen.getByLabelText("Password"), "Demo@2026");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
   return user;
 }
 
@@ -24,7 +33,7 @@ describe("St. Kisa member portal", () => {
     localStorage.clear();
   });
 
-  it("requires login and opens the board dashboard", async () => {
+  it("keeps credentials private, starts empty, and accepts manual login", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -33,9 +42,15 @@ describe("St. Kisa member portal", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: /board administrator/i })
-    );
+    expect(screen.getByLabelText("Email address")).toHaveValue("");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
+    expect(screen.queryByText("Quick showcase access")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Demo accounts")).not.toBeInTheDocument();
+    expect(screen.queryByText(/@stkisa\.org/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Demo@2026")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Email address"), "admin@stkisa.org");
+    await user.type(screen.getByLabelText("Password"), "Demo@2026");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(
       screen.getByRole("heading", { name: /good morning, admin demo/i })
     ).toBeInTheDocument();
@@ -57,6 +72,7 @@ describe("St. Kisa member portal", () => {
     ["/contributions", "Contributions"],
     ["/statements", "Statement centre"],
     ["/accounting", "Accounting"],
+    ["/approvals", "Approval inbox"],
     ["/welfare", "Welfare support"],
     ["/refunds", "Refund requests"],
     ["/investments", "Investment register"],
@@ -119,5 +135,34 @@ describe("St. Kisa member portal", () => {
     expect(screen.queryByRole("link", { name: "Accounting" })).not.toBeInTheDocument();
     expect(screen.getByText("SKY-004")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Documents" })).toBeInTheDocument();
+  });
+
+  it("keeps invalid credentials on the login page", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
+    );
+    await user.type(screen.getByLabelText("Email address"), "admin@stkisa.org");
+    await user.type(screen.getByLabelText("Password"), "incorrect");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Invalid email or password"
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent("credentials shown");
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
+  });
+
+  it("shows approval actions only to the role responsible for the current step", async () => {
+    await renderAs("/approvals", "Treasurer");
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    cleanup();
+    localStorage.removeItem("sky_showcase_session_v4");
+
+    await renderAs("/approvals", "Secretary");
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.getByText(/awaiting treasurer action/i)).toBeInTheDocument();
   });
 });

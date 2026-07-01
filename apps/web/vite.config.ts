@@ -15,6 +15,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
+      include: [
+        "src/lib/finance.ts",
+        "src/state/approval.ts"
+      ],
       exclude: [
         "src/main.tsx",
         "src/test/**",

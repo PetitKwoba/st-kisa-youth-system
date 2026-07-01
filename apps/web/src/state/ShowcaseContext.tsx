@@ -12,6 +12,13 @@ import {
   type Member
 } from "../data/mock";
 import type { ContributionType } from "../lib/finance";
+import {
+  applyApprovalDecision,
+  createApprovalSteps,
+  type ApprovalDecision,
+  type ApprovalKind,
+  type ApprovalRequest
+} from "./approval";
 
 export type Role =
   | "ADMIN"
@@ -51,7 +58,7 @@ export interface RefundRequest {
   netPayable: number;
   method: string;
   reason: string;
-  status: "Verification" | "Approved" | "Scheduled";
+  status: "Verification" | "Approved" | "Rejected" | "Scheduled";
   createdAt: string;
 }
 
@@ -63,7 +70,7 @@ export interface Investment {
   rate: number;
   maturityDate: string;
   expectedIncome: number;
-  status: "Proposed" | "Active" | "Matured";
+  status: "Proposed" | "Approved" | "Rejected" | "Active" | "Matured";
 }
 
 export interface StoredDocument {
@@ -84,6 +91,7 @@ interface ShowcaseData {
   refunds: RefundRequest[];
   investments: Investment[];
   documents: StoredDocument[];
+  approvalRequests: ApprovalRequest[];
 }
 
 interface ContributionInput {
@@ -96,9 +104,7 @@ interface ContributionInput {
 
 interface ShowcaseContextValue extends ShowcaseData {
   user: DemoUser | null;
-  accounts: Array<DemoUser & { password: string }>;
   login: (email: string, password: string) => boolean;
-  quickLogin: (role: Role) => void;
   logout: () => void;
   resetDemo: () => void;
   addMember: (input: Omit<Member, "id" | "initials" | "balance" | "welfare" | "tableBanking">) => Member;
@@ -107,6 +113,11 @@ interface ShowcaseContextValue extends ShowcaseData {
   addRefundRequest: (input: Pick<RefundRequest, "memberId" | "requestedAmount" | "method" | "reason">) => RefundRequest;
   addInvestment: (input: Omit<Investment, "id" | "expectedIncome" | "status">) => Investment;
   addDocument: (input: Omit<StoredDocument, "id" | "uploadedAt">) => StoredDocument;
+  actOnApproval: (
+    requestId: string,
+    decision: ApprovalDecision,
+    comment: string
+  ) => { ok: true } | { ok: false; error: string };
   can: (capability: Capability) => boolean;
 }
 
@@ -119,10 +130,11 @@ export type Capability =
   | "refunds:view"
   | "investments:view"
   | "reports:view"
-  | "documents:view";
+  | "documents:view"
+  | "approvals:view";
 
-const STORAGE_KEY = "sky_showcase_data_v3";
-const SESSION_KEY = "sky_showcase_session_v3";
+const STORAGE_KEY = "sky_showcase_data_v4";
+const SESSION_KEY = "sky_showcase_session_v4";
 const DEMO_PASSWORD = "Demo@2026";
 
 export const demoAccounts: Array<DemoUser & { password: string }> = [
@@ -145,6 +157,24 @@ export const demoAccounts: Array<DemoUser & { password: string }> = [
     initials: "PW"
   },
   {
+    id: "demo-secretary",
+    name: "Faith Nanjala",
+    email: "secretary@stkisa.org",
+    password: DEMO_PASSWORD,
+    role: "SECRETARY",
+    memberId: "SKY-003",
+    initials: "FN"
+  },
+  {
+    id: "demo-chairperson",
+    name: "Mary Nasimiyu",
+    email: "chair@stkisa.org",
+    password: DEMO_PASSWORD,
+    role: "CHAIRPERSON",
+    memberId: "SKY-001",
+    initials: "MN"
+  },
+  {
     id: "demo-member",
     name: "David Wekesa",
     email: "member@stkisa.org",
@@ -152,8 +182,62 @@ export const demoAccounts: Array<DemoUser & { password: string }> = [
     role: "MEMBER",
     memberId: "SKY-004",
     initials: "DW"
+  },
+  {
+    id: "demo-auditor",
+    name: "Internal Auditor",
+    email: "auditor@stkisa.org",
+    password: DEMO_PASSWORD,
+    role: "AUDITOR",
+    memberId: null,
+    initials: "IA"
   }
 ];
+
+function seededApproval(input: {
+  id: string;
+  kind: ApprovalKind;
+  referenceId: string;
+  requesterId: string;
+  requesterName: string;
+  amount: number;
+  createdAt: string;
+  status?: "Pending" | "Approved";
+  evidenceStatus: string;
+  policyChecks: string[];
+}): ApprovalRequest {
+  const status = input.status ?? "Pending";
+  const steps = createApprovalSteps(input.kind).map((step) =>
+    status === "Approved"
+      ? {
+          ...step,
+          status: "Approved" as const,
+          actedBy:
+            step.role === "TREASURER"
+              ? "Peter Wafula"
+              : step.role === "SECRETARY"
+                ? "Faith Nanjala"
+                : "Mary Nasimiyu",
+          actedAt: input.createdAt,
+          comment: "Approved in seeded showcase data"
+        }
+      : step
+  );
+  return {
+    id: input.id,
+    kind: input.kind,
+    referenceId: input.referenceId,
+    requesterId: input.requesterId,
+    requesterName: input.requesterName,
+    amount: input.amount,
+    evidenceStatus: input.evidenceStatus,
+    policyChecks: input.policyChecks,
+    status,
+    steps,
+    history: [],
+    createdAt: input.createdAt
+  };
+}
 
 const seedData: ShowcaseData = {
   members: seedMembers,
@@ -207,7 +291,67 @@ const seedData: ShowcaseData = {
       status: "Active"
     }
   ],
-  documents: []
+  documents: [],
+  approvalRequests: [
+    seededApproval({
+      id: "APR-WF-013",
+      kind: "WELFARE",
+      referenceId: "WF-2026-013",
+      requesterId: "SKY-004",
+      requesterName: "David Wekesa",
+      amount: 12500,
+      evidenceStatus: "Supporting document declared",
+      policyChecks: [
+        "Membership record available",
+        "Arrears review required",
+        "Direct facility payment required"
+      ],
+      createdAt: "2026-06-28T09:30:00.000Z"
+    }),
+    seededApproval({
+      id: "APR-WF-012",
+      kind: "WELFARE",
+      referenceId: "WF-2026-012",
+      requesterId: "SKY-005",
+      requesterName: "Lilian Nekesa",
+      amount: 8000,
+      evidenceStatus: "Evidence verified",
+      policyChecks: ["Active membership verified", "Liquidity verified"],
+      status: "Approved",
+      createdAt: "2026-06-24T12:00:00.000Z"
+    }),
+    seededApproval({
+      id: "APR-RF-007",
+      kind: "REFUND",
+      referenceId: "RF-2026-007",
+      requesterId: "SKY-002",
+      requesterName: "Peter Wafula",
+      amount: 8950,
+      evidenceStatus: "Payment details verified",
+      policyChecks: [
+        "KES 50 processing fee applied",
+        "Electronic payment required"
+      ],
+      status: "Approved",
+      createdAt: "2026-06-22T11:00:00.000Z"
+    }),
+    seededApproval({
+      id: "APR-INV-001",
+      kind: "INVESTMENT",
+      referenceId: "INV-001",
+      requesterId: "SKY-002",
+      requesterName: "Peter Wafula",
+      amount: 100000,
+      evidenceStatus: "Instrument details recorded",
+      policyChecks: [
+        "Allowed instrument",
+        "Within 25% liquidity limit",
+        "Monthly reporting required"
+      ],
+      status: "Approved",
+      createdAt: "2026-06-18T08:00:00.000Z"
+    })
+  ]
 };
 
 const permissions: Record<Capability, Role[]> = {
@@ -219,10 +363,28 @@ const permissions: Record<Capability, Role[]> = {
   "refunds:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "SECRETARY", "MEMBER", "AUDITOR"],
   "investments:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "AUDITOR"],
   "reports:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "SECRETARY", "AUDITOR"],
-  "documents:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "SECRETARY", "MEMBER", "AUDITOR"]
+  "documents:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "SECRETARY", "MEMBER", "AUDITOR"],
+  "approvals:view": ["ADMIN", "CHAIRPERSON", "TREASURER", "SECRETARY", "AUDITOR"]
 };
 
 const ShowcaseContext = createContext<ShowcaseContextValue | null>(null);
+
+function withoutPassword(
+  account: DemoUser & { password: string }
+): DemoUser {
+  return {
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    role: account.role,
+    memberId: account.memberId,
+    initials: account.initials
+  };
+}
+
+function formatPolicyAmount(amount: number) {
+  return `KES ${amount.toLocaleString("en-KE")}`;
+}
 
 function loadData(): ShowcaseData {
   try {
@@ -263,16 +425,8 @@ export function ShowcaseProvider({ children }: { children: ReactNode }) {
         candidate.password === password
     );
     if (!account) return false;
-    const { password: _password, ...safeAccount } = account;
-    establishSession(safeAccount);
+    establishSession(withoutPassword(account));
     return true;
-  }
-
-  function quickLogin(role: Role) {
-    const account =
-      demoAccounts.find((candidate) => candidate.role === role) ?? demoAccounts[0]!;
-    const { password: _password, ...safeAccount } = account;
-    establishSession(safeAccount);
   }
 
   function logout() {
@@ -350,14 +504,37 @@ export function ShowcaseProvider({ children }: { children: ReactNode }) {
   ) {
     const member = data.members.find((item) => item.id === input.memberId);
     if (!member) throw new Error("Member not found.");
+    const createdAt = new Date().toISOString();
+    const id = `WF-2026-${String(data.welfareRequests.length + 14).padStart(3, "0")}`;
     const request: WelfareRequest = {
       ...input,
-      id: `WF-2026-${String(data.welfareRequests.length + 14).padStart(3, "0")}`,
+      id,
       memberName: member.name,
       status: "Pending verification",
-      createdAt: new Date().toISOString()
+      createdAt
     };
-    persist({ ...data, welfareRequests: [request, ...data.welfareRequests] });
+    const approval = seededApproval({
+      id: `APR-${id}`,
+      kind: "WELFARE",
+      referenceId: id,
+      requesterId: member.id,
+      requesterName: member.name,
+      amount: input.amount,
+      evidenceStatus: "Evidence pending official verification",
+      policyChecks: [
+        `${member.status} membership status recorded`,
+        "Contribution and arrears review required",
+        input.category === "Medical emergency"
+          ? "Direct facility payment required"
+          : "Benefit schedule check required"
+      ],
+      createdAt
+    });
+    persist({
+      ...data,
+      welfareRequests: [request, ...data.welfareRequests],
+      approvalRequests: [approval, ...data.approvalRequests]
+    });
     return request;
   }
 
@@ -368,32 +545,80 @@ export function ShowcaseProvider({ children }: { children: ReactNode }) {
     if (!member) throw new Error("Member not found.");
     const processingFee = 50;
     const deductions = member.status === "Arrears" ? 500 : 0;
+    const createdAt = new Date().toISOString();
+    const id = `RF-2026-${String(data.refunds.length + 8).padStart(3, "0")}`;
+    const netPayable = Math.max(
+      0,
+      input.requestedAmount - processingFee - deductions
+    );
     const request: RefundRequest = {
       ...input,
-      id: `RF-2026-${String(data.refunds.length + 8).padStart(3, "0")}`,
+      id,
       memberName: member.name,
       processingFee,
       deductions,
-      netPayable: Math.max(0, input.requestedAmount - processingFee - deductions),
+      netPayable,
       status: "Verification",
-      createdAt: new Date().toISOString()
+      createdAt
     };
-    persist({ ...data, refunds: [request, ...data.refunds] });
+    const approval = seededApproval({
+      id: `APR-${id}`,
+      kind: "REFUND",
+      referenceId: id,
+      requesterId: member.id,
+      requesterName: member.name,
+      amount: netPayable,
+      evidenceStatus: "Payment method recorded",
+      policyChecks: [
+        "KES 50 processing fee applied",
+        deductions ? `${formatPolicyAmount(deductions)} obligations deducted` : "No obligations deducted",
+        netPayable > 2000
+          ? "Electronic payment method required"
+          : "Payment method within policy"
+      ],
+      createdAt
+    });
+    persist({
+      ...data,
+      refunds: [request, ...data.refunds],
+      approvalRequests: [approval, ...data.approvalRequests]
+    });
     return request;
   }
 
   function addInvestment(
     input: Omit<Investment, "id" | "expectedIncome" | "status">
   ) {
+    const createdAt = new Date().toISOString();
+    const id = `INV-${String(data.investments.length + 1).padStart(3, "0")}`;
     const investment: Investment = {
       ...input,
-      id: `INV-${String(data.investments.length + 1).padStart(3, "0")}`,
+      id,
       expectedIncome: Math.round(
         input.principal * (input.rate / 100) * 0.5
       ),
       status: "Proposed"
     };
-    persist({ ...data, investments: [investment, ...data.investments] });
+    const approval = seededApproval({
+      id: `APR-${id}`,
+      kind: "INVESTMENT",
+      referenceId: id,
+      requesterId: user?.memberId ?? user?.id ?? "system",
+      requesterName: user?.name ?? "System user",
+      amount: input.principal,
+      evidenceStatus: "Instrument and maturity details recorded",
+      policyChecks: [
+        "Allowed investment instrument",
+        "Within provisional 25% liquidity limit",
+        "Committee resolution required"
+      ],
+      createdAt
+    });
+    persist({
+      ...data,
+      investments: [investment, ...data.investments],
+      approvalRequests: [approval, ...data.approvalRequests]
+    });
     return investment;
   }
 
@@ -409,13 +634,83 @@ export function ShowcaseProvider({ children }: { children: ReactNode }) {
     return document;
   }
 
+  function actOnApproval(
+    requestId: string,
+    decision: ApprovalDecision,
+    comment: string
+  ): { ok: true } | { ok: false; error: string } {
+    if (!user) return { ok: false, error: "Sign in to act on requests." };
+    const request = data.approvalRequests.find((item) => item.id === requestId);
+    if (!request) return { ok: false, error: "Approval request not found." };
+    const result = applyApprovalDecision(request, {
+      actor: {
+        id: user.id,
+        name: user.name,
+        role: user.role
+      },
+      decision,
+      comment,
+      actedAt: new Date().toISOString()
+    });
+    if (!result.ok) return result;
+
+    const approvalRequests = data.approvalRequests.map((item) =>
+      item.id === requestId ? result.request : item
+    );
+    const welfareRequests = data.welfareRequests.map((item) =>
+      item.id === result.request.referenceId
+        ? {
+            ...item,
+            status:
+              result.request.status === "Approved"
+                ? ("Approved" as const)
+                : result.request.status === "Rejected"
+                  ? ("Rejected" as const)
+                  : ("Pending verification" as const)
+          }
+        : item
+    );
+    const refunds = data.refunds.map((item) =>
+      item.id === result.request.referenceId
+        ? {
+            ...item,
+            status:
+              result.request.status === "Approved"
+                ? ("Approved" as const)
+                : result.request.status === "Rejected"
+                  ? ("Rejected" as const)
+                  : ("Verification" as const)
+          }
+        : item
+    );
+    const investments = data.investments.map((item) =>
+      item.id === result.request.referenceId
+        ? {
+            ...item,
+            status:
+              result.request.status === "Approved"
+                ? ("Approved" as const)
+                : result.request.status === "Rejected"
+                  ? ("Rejected" as const)
+                  : ("Proposed" as const)
+          }
+        : item
+    );
+    persist({
+      ...data,
+      approvalRequests,
+      welfareRequests,
+      refunds,
+      investments
+    });
+    return { ok: true };
+  }
+
   const value = useMemo<ShowcaseContextValue>(
     () => ({
       ...data,
       user,
-      accounts: demoAccounts,
       login,
-      quickLogin,
       logout,
       resetDemo,
       addMember,
@@ -424,6 +719,7 @@ export function ShowcaseProvider({ children }: { children: ReactNode }) {
       addRefundRequest,
       addInvestment,
       addDocument,
+      actOnApproval,
       can: (capability) =>
         user ? permissions[capability].includes(user.role) : false
     }),

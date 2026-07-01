@@ -1,40 +1,18 @@
 import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { useShowcase, type Role } from "../state/ShowcaseContext";
-
-const roleOptions: Array<{
-  role: Role;
-  title: string;
-  description: string;
-}> = [
-  {
-    role: "ADMIN",
-    title: "Board administrator",
-    description: "Full membership, finance, policy and reporting access."
-  },
-  {
-    role: "TREASURER",
-    title: "Treasurer",
-    description: "Contributions, accounting, refunds and investments."
-  },
-  {
-    role: "MEMBER",
-    title: "Member",
-    description: "Personal statement, requests, contributions and documents."
-  }
-];
+import { useShowcase } from "../state/ShowcaseContext";
 
 export function Login() {
-  const { login, quickLogin } = useShowcase();
-  const [email, setEmail] = useState("admin@stkisa.org");
-  const [password, setPassword] = useState("Demo@2026");
+  const { login } = useShowcase();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!login(email, password)) {
-      setError("Use one of the demo accounts shown below.");
+      setError("Invalid email or password.");
     }
   }
 
@@ -71,16 +49,16 @@ export function Login() {
             <span className="login-lock"><LockKeyhole size={22} /></span>
             <p className="eyebrow">Member portal</p>
             <h2>Welcome back</h2>
-            <p>Sign in or choose a showcase role.</p>
+            <p>Enter your account credentials to continue.</p>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off">
             <label className="field">
               Email address
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
+                autoComplete="off"
                 required
               />
             </label>
@@ -91,7 +69,7 @@ export function Login() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -109,26 +87,6 @@ export function Login() {
             </button>
           </form>
 
-          <div className="quick-login">
-            <span>Quick showcase access</span>
-            {roleOptions.map((option) => (
-              <button
-                key={option.role}
-                type="button"
-                onClick={() => quickLogin(option.role)}
-              >
-                <span className={`role-dot role-${option.role.toLowerCase()}`} />
-                <span>
-                  <strong>{option.title}</strong>
-                  <small>{option.description}</small>
-                </span>
-                <ArrowRight size={16} />
-              </button>
-            ))}
-          </div>
-          <p className="demo-note">
-            Demo password for every account: <strong>Demo@2026</strong>
-          </p>
         </div>
       </section>
     </main>
