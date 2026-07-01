@@ -2,6 +2,7 @@ import {
   Bell,
   BookOpenCheck,
   ChevronDown,
+  ClipboardCheck,
   FileArchive,
   FileBarChart,
   HandCoins,
@@ -35,6 +36,7 @@ const primaryNav = [
 ];
 
 const secondaryNav = [
+  { to: "/approvals", label: "Approvals", icon: ClipboardCheck, capability: "approvals:view" },
   { to: "/welfare", label: "Welfare", icon: ShieldCheck, capability: "welfare:view" },
   { to: "/refunds", label: "Refunds", icon: Undo2, capability: "refunds:view" },
   { to: "/investments", label: "Investments", icon: TrendingUp, capability: "investments:view" },

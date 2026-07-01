@@ -4,8 +4,10 @@ A Netlify-ready, interactive showcase for St. Kisa Youth Self-Help Group.
 
 ## Showcase capabilities
 
-- Member, Treasurer, and Administrator login experiences
+- Manual login experiences for members and all official roles
 - Role-based navigation and record visibility
+- Ordered welfare, refund, and investment approval workflows with audit history
+- Role-specific Approval Inbox with pending, approved, and rejected queues
 - Persistent browser data using versioned local storage
 - Member onboarding and searchable register
 - Contribution posting with table-banking validation
@@ -17,19 +19,12 @@ A Netlify-ready, interactive showcase for St. Kisa Youth Self-Help Group.
 - PDF Treasurer, trial-balance, and financial-position reports
 - Responsive desktop and mobile layouts
 
-## Demo accounts
+## Showcase access
 
-All demo accounts use the password `Demo@2026`.
-
-| Role | Email |
-| --- | --- |
-| Administrator | `admin@stkisa.org` |
-| Treasurer | `treasurer@stkisa.org` |
-| Member | `member@stkisa.org` |
-
-The credentials are intentionally public because this build is a browser-only
-showcase. They must be replaced by server-side authentication before handling
-real member data.
+Login fields start empty and no account emails or passwords are displayed in
+the application. Showcase credentials are supplied privately to the project
+owner. Browser-only authentication must be replaced by server-side
+authentication before handling real member data.
 
 ## Run locally
 

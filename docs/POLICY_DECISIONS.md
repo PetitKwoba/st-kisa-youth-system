@@ -26,6 +26,8 @@ ratified in the next Board or AGM resolution.
 - Where liquidity is insufficient, payment may be scheduled in no more than
   three documented instalments.
 - Refunds above KES 2,000 must use M-Pesa or bank transfer.
+- A refund requires Treasurer verification followed by Chairperson final
+  approval. The Admin and Auditor roles are read-only.
 
 ## Health support
 
@@ -40,8 +42,8 @@ ratified in the next Board or AGM resolution.
 - Allowed instruments are Kenya Treasury bills, Kenya Government bonds, and
   CMA-regulated money market funds.
 - A single investment may not exceed 25% of available liquid funds.
-- Every investment requires an Executive Committee resolution and approval by
-  the Chairperson and Treasurer.
+- Every investment requires an Executive Committee resolution, Treasurer
+  verification, and Chairperson final approval, in that order.
 - Maturity, principal, expected income, realized income, institution, and
   approval reference are mandatory.
 - The Treasurer reports the investment register monthly.
@@ -63,6 +65,8 @@ ratified in the next Board or AGM resolution.
 ## Authentication
 
 - Every user has an individual account; shared official accounts are prohibited.
+- Showcase users must enter their email and password manually. Credentials are
+  never displayed or prefilled in the application.
 - Passwords require at least 10 characters and are stored only as strong hashes.
 - Sessions use HTTP-only, SameSite cookies and expire after eight hours.
 - Officials should use two-factor authentication before production launch.
